@@ -17,6 +17,6 @@ catalogue
 
 # For scrubadub.comparison
 # scikit-learn
-cython
+
 typing_extensions
 faker
