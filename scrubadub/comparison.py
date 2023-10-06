@@ -12,7 +12,7 @@ from .detectors.tagged import KnownFilthItem
 from typing import List, Dict, Union, Optional, Tuple, Callable, Iterable, Type, Set
 import numpy as np
 import pandas as pd
-import sklearn.metrics
+# import sklearn.metrics
 
 # I was originally thinking of building this into the Filth system, but they serve subtlly different purposes:
 #   * Filths need to be merged by text location so that replacements can be made
@@ -265,134 +265,134 @@ class FilthGrouper(ToStringMixin, object):
         return pd.concat(df_list).fillna(0).astype(int)
 
 
-def get_filth_classification_report(
-        filth_list: List[Filth],
-        combine_detectors: bool = False,
-        groupby_documents: bool = False,
-        output_dict: bool = False,
-) -> Optional[Union[str, Dict[str, float]]]:
-    """Evaluates the performance of detectors using KnownFilth.
+# def get_filth_classification_report(
+#         filth_list: List[Filth],
+#         combine_detectors: bool = False,
+#         groupby_documents: bool = False,
+#         output_dict: bool = False,
+# ) -> Optional[Union[str, Dict[str, float]]]:
+#     """Evaluates the performance of detectors using KnownFilth.
 
-    An example of using this is shown below:
+#     An example of using this is shown below:
 
-    .. code:: pycon
+#     .. code:: pycon
 
-        >>> import scrubadub, scrubadub.comparison, scrubadub.detectors.text_blob
-        >>> scrubber = scrubadub.Scrubber(detector_list=[
-        ...     scrubadub.detectors.text_blob.TextBlobNameDetector(name='name_detector'),
-        ...     scrubadub.detectors.TaggedEvaluationFilthDetector([
-        ...         {'match': 'Tom', 'filth_type': 'name'},
-        ...         {'match': 'tom@example.com', 'filth_type': 'email'},
-        ...     ]),
-        ... ])
-        >>> filth_list = list(scrubber.iter_filth("Hello I am Tom"))
-        >>> print(scrubadub.comparison.get_filth_classification_report(filth_list))
-        filth    detector         locale      precision    recall  f1-score   support
-        <BLANKLINE>
-        name     name_detector    en_US            1.00      1.00      1.00         1
-        <BLANKLINE>
-                                    accuracy                           1.00         1
-                                   macro avg       1.00      1.00      1.00         1
-                                weighted avg       1.00      1.00      1.00         1
-        <BLANKLINE>
+#         >>> import scrubadub, scrubadub.comparison, scrubadub.detectors.text_blob
+#         >>> scrubber = scrubadub.Scrubber(detector_list=[
+#         ...     scrubadub.detectors.text_blob.TextBlobNameDetector(name='name_detector'),
+#         ...     scrubadub.detectors.TaggedEvaluationFilthDetector([
+#         ...         {'match': 'Tom', 'filth_type': 'name'},
+#         ...         {'match': 'tom@example.com', 'filth_type': 'email'},
+#         ...     ]),
+#         ... ])
+#         >>> filth_list = list(scrubber.iter_filth("Hello I am Tom"))
+#         >>> print(scrubadub.comparison.get_filth_classification_report(filth_list))
+#         filth    detector         locale      precision    recall  f1-score   support
+#         <BLANKLINE>
+#         name     name_detector    en_US            1.00      1.00      1.00         1
+#         <BLANKLINE>
+#                                     accuracy                           1.00         1
+#                                    macro avg       1.00      1.00      1.00         1
+#                                 weighted avg       1.00      1.00      1.00         1
+#         <BLANKLINE>
 
-    :param filth_list: The list of detected filth
-    :type filth_list: A list of `Filth` objects
-    :param combine_detectors: Combine performance of all detectors for the same filth/locale
-    :type combine_detectors: bool, optional
-    :param groupby_documents: Show performance for each file individually
-    :type groupby_documents: bool, optional
-    :param output_dict: Return the report in JSON format, defautls to False
-    :type output_dict: bool, optional
-    :return: The report in JSON (a `dict`) or in plain text
-    :rtype: `str` or `dict`
-    """
-    if len(filth_list) == 0:
-        return None
+#     :param filth_list: The list of detected filth
+#     :type filth_list: A list of `Filth` objects
+#     :param combine_detectors: Combine performance of all detectors for the same filth/locale
+#     :type combine_detectors: bool, optional
+#     :param groupby_documents: Show performance for each file individually
+#     :type groupby_documents: bool, optional
+#     :param output_dict: Return the report in JSON format, defautls to False
+#     :type output_dict: bool, optional
+#     :return: The report in JSON (a `dict`) or in plain text
+#     :rtype: `str` or `dict`
+#     """
+#     if len(filth_list) == 0:
+#         return None
 
-    grouper = FilthGrouper.from_filth_list(filth_list, combine_detectors=combine_detectors,
-                                           groupby_documents=groupby_documents)
-    results_df = grouper.get_counts(expand_missing=True)
+#     grouper = FilthGrouper.from_filth_list(filth_list, combine_detectors=combine_detectors,
+#                                            groupby_documents=groupby_documents)
+#     results_df = grouper.get_counts(expand_missing=True)
 
-    filth_index = results_df.columns.names.index('filth')
-    detector_index = results_df.columns.names.index('detector')
-    tagged_column_mask = np.array(
-        [x[detector_index] == filth_module.TaggedEvaluationFilth.type for x in results_df.columns]
-    )
+#     filth_index = results_df.columns.names.index('filth')
+#     detector_index = results_df.columns.names.index('detector')
+#     tagged_column_mask = np.array(
+#         [x[detector_index] == filth_module.TaggedEvaluationFilth.type for x in results_df.columns]
+#     )
 
-    # Find filth types that have some tagged filth
-    tagged_types = [x[filth_index] for x in results_df.columns[tagged_column_mask]]
+#     # Find filth types that have some tagged filth
+#     tagged_types = [x[filth_index] for x in results_df.columns[tagged_column_mask]]
 
-    # Select the columns that have some related tagged filth, but are not tagged filth themselves
-    detected_columns = [
-        x for x in results_df.columns[~tagged_column_mask]
-        if x[filth_index] in tagged_types
-    ]
-    detected_classes = results_df.loc[:, detected_columns].values
+#     # Select the columns that have some related tagged filth, but are not tagged filth themselves
+#     detected_columns = [
+#         x for x in results_df.columns[~tagged_column_mask]
+#         if x[filth_index] in tagged_types
+#     ]
+#     detected_classes = results_df.loc[:, detected_columns].values
 
-    # Take the detected_columns above and find their tagged counterparts
-    tagged_columns = [
-        (*x[:detector_index], filth_module.TaggedEvaluationFilth.type, *x[detector_index + 1:])
-        for x in detected_columns
-    ]
-    # If they don't have any tagged counterpart, set the column to zero
-    for column in tagged_columns:
-        if column not in results_df.columns:
-            results_df.loc[:, column] = 0
-            tagged_column_mask = np.append(tagged_column_mask, [True])
+#     # Take the detected_columns above and find their tagged counterparts
+#     tagged_columns = [
+#         (*x[:detector_index], filth_module.TaggedEvaluationFilth.type, *x[detector_index + 1:])
+#         for x in detected_columns
+#     ]
+#     # If they don't have any tagged counterpart, set the column to zero
+#     for column in tagged_columns:
+#         if column not in results_df.columns:
+#             results_df.loc[:, column] = 0
+#             tagged_column_mask = np.append(tagged_column_mask, [True])
 
-    true_classes = results_df.loc[:, tagged_columns].values
+#     true_classes = results_df.loc[:, tagged_columns].values
 
-    # Then no true classes were found
-    if detected_classes.shape[1] == 0:
-        return None
+#     # Then no true classes were found
+#     if detected_classes.shape[1] == 0:
+#         return None
 
-    report_prefix = None  # type: Optional[str]
-    if not output_dict:
-        report_prefix = ''
-        class_labels = [''] * len(detected_columns)
-        for i, name in enumerate(results_df.columns.names):
-            max_length = max([len(str(columns[i])) for columns in results_df.columns] + [len(name)]) + 4
-            class_labels = [
-                name + columns[i].ljust(max_length)
-                for name, columns in zip(class_labels, detected_columns)
-            ]
-            report_prefix += name.ljust(max_length)
-        class_labels = [
-            name
-            for name in class_labels
-        ]
-        if report_prefix is not None:
-            report_prefix += '  '
-    else:
-        base_name = ("{}:" * len(results_df.columns.names)).rstrip(':')
-        class_labels = [base_name.format(*x) for x in detected_columns]
+#     report_prefix = None  # type: Optional[str]
+#     if not output_dict:
+#         report_prefix = ''
+#         class_labels = [''] * len(detected_columns)
+#         for i, name in enumerate(results_df.columns.names):
+#             max_length = max([len(str(columns[i])) for columns in results_df.columns] + [len(name)]) + 4
+#             class_labels = [
+#                 name + columns[i].ljust(max_length)
+#                 for name, columns in zip(class_labels, detected_columns)
+#             ]
+#             report_prefix += name.ljust(max_length)
+#         class_labels = [
+#             name
+#             for name in class_labels
+#         ]
+#         if report_prefix is not None:
+#             report_prefix += '  '
+#     else:
+#         base_name = ("{}:" * len(results_df.columns.names)).rstrip(':')
+#         class_labels = [base_name.format(*x) for x in detected_columns]
 
-    # If there is only one label reshape the data so that
-    # the classification_report interprets it less ambiguously
-    report_labels = []  # type: List[int]
-    if detected_classes.shape[1] == 1:
-        detected_classes = detected_classes.T[0]
-        true_classes = true_classes.T[0]
-        report_labels = [1]
-    else:
-        report_labels = [class_labels.index(x) for x in sorted(class_labels)]
-        class_labels = sorted(class_labels)
+#     # If there is only one label reshape the data so that
+#     # the classification_report interprets it less ambiguously
+#     report_labels = []  # type: List[int]
+#     if detected_classes.shape[1] == 1:
+#         detected_classes = detected_classes.T[0]
+#         true_classes = true_classes.T[0]
+#         report_labels = [1]
+#     else:
+#         report_labels = [class_labels.index(x) for x in sorted(class_labels)]
+#         class_labels = sorted(class_labels)
 
-    report = sklearn.metrics.classification_report(
-        true_classes,
-        detected_classes,
-        output_dict=output_dict,
-        zero_division=0,
-        target_names=class_labels,
-        labels=report_labels,
-        # **extra_args
-    )
+#     report = sklearn.metrics.classification_report(
+#         true_classes,
+#         detected_classes,
+#         output_dict=output_dict,
+#         zero_division=0,
+#         target_names=class_labels,
+#         labels=report_labels,
+#         # **extra_args
+#     )
 
-    if report_prefix is not None:
-        report = report_prefix + report.lstrip(' ')
+#     if report_prefix is not None:
+#         report = report_prefix + report.lstrip(' ')
 
-    return report
+#     return report
 
 
 def get_filth_dataframe(filth_list: List[Filth]) -> pd.DataFrame:
