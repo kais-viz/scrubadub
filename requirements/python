@@ -1,5 +1,5 @@
 # For the TextBlobNameDetecotr
-textblob==0.15.3
+textblob==0.17.1
 
 # For the PhoneDetector
 phonenumbers
